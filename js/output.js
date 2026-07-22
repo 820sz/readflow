@@ -144,18 +144,7 @@ const OutputModule = (() => {
     try {
       const image = await Camera.pickFromGallery();
       Utils.showLoading("AI 识别文字中…");
-
-      // 用 AI 从图片中提取文字
-      const result = await AI.chat([
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: image } },
-            { type: "text", text: "请只提取图片中的所有英文文本，不要翻译，不要加任何解释。直接输出文本。" }
-          ]
-        }
-      ], { temperature: 0.1, max_tokens: 2000 });
-
+      const result = await AI.ocrImage(image);
       Utils.hideLoading();
       document.getElementById("user-translation").value = result.trim();
       Utils.toast("✅ 文字已识别，可编辑后提交");
