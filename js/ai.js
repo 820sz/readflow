@@ -91,8 +91,9 @@ const AI = (() => {
       return JSON.parse(jsonStr);
     } catch (e) {
       if (e instanceof SyntaxError) {
-        console.error("JSON parse failed, raw response:", raw.slice(0, 500));
-        throw new Error("AI 返回格式异常，请重试");
+        const snippet = jsonStr.slice(0, 80) + (jsonStr.length > 80 ? "…" : "");
+        console.error("JSON parse failed, jsonStr:", snippet, "| length:", jsonStr.length);
+        throw new Error(`AI 返回格式异常（${jsonStr.length}字），请重试`);
       }
       throw e;
     }
@@ -136,7 +137,7 @@ ${ocrText}
 - 不要漏掉任何单词、短语或句子
 - 翻译要准确、符合语境`;
 
-    const raw = await chat([{ role: "user", content: prompt }], { temperature: 0.3 });
+    const raw = await chat([{ role: "user", content: prompt }], { temperature: 0.3, max_tokens: 8192 });
     console.log("OCR text length:", ocrText.length, "API response length:", raw.length);
     const result = extractJSON(raw);
     result.fullText = result.fullText || ocrText;

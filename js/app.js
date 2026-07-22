@@ -61,7 +61,7 @@ const App = (() => {
     // 在页面底部显示版本号（确认加载了新代码）
     const verEl = document.createElement("div");
     verEl.style.cssText = "position:fixed;bottom:72px;right:8px;font-size:10px;color:#ccc;z-index:1;pointer-events:none;";
-    verEl.textContent = "v4";
+    verEl.textContent = "v5";
     document.body.appendChild(verEl);
 
     // 底部导航绑定
