@@ -49,10 +49,20 @@ const App = (() => {
     });
     // ====== 全局错误捕获结束 ======
 
-    // 注册 Service Worker
+    // 先注销所有旧 SW，再注册新的
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      }).finally(() => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
     }
+
+    // 在页面底部显示版本号（确认加载了新代码）
+    const verEl = document.createElement("div");
+    verEl.style.cssText = "position:fixed;bottom:72px;right:8px;font-size:10px;color:#ccc;z-index:1;pointer-events:none;";
+    verEl.textContent = "v4";
+    document.body.appendChild(verEl);
 
     // 底部导航绑定
     document.querySelectorAll(".nav-btn").forEach(btn => {
