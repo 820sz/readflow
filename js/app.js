@@ -4,6 +4,51 @@ const App = (() => {
   let currentPanel = "input";
 
   function init() {
+    // ====== 全局错误捕获：任何未处理的错误都显示出来 ======
+    window.addEventListener("error", (e) => {
+      const msg = `[${e.filename?.split("/").pop() || "?"}:${e.lineno}] ${e.message}`;
+      console.error("GLOBAL ERROR:", msg, e.error);
+      Utils.hideLoading();
+      // 显示 10 秒，确保用户能看清
+      const el = document.getElementById("toast");
+      el.textContent = `❌ ${msg}`;
+      el.classList.remove("hidden");
+      el.style.whiteSpace = "pre-wrap";
+      el.style.maxWidth = "90vw";
+      el.style.fontSize = "12px";
+      clearTimeout(el._timeout);
+      el._timeout = setTimeout(() => {
+        el.classList.add("hidden");
+        el.style.whiteSpace = "nowrap";
+        el.style.maxWidth = "";
+        el.style.fontSize = "";
+      }, 10000);
+    });
+
+    window.addEventListener("unhandledrejection", (e) => {
+      const reason = e.reason;
+      const msg = reason?.message || String(reason);
+      const stack = reason?.stack || "";
+      const fileLine = stack.match(/(\w+\.js):(\d+)/);
+      const loc = fileLine ? `[${fileLine[1]}:${fileLine[2]}]` : "";
+      console.error("UNHANDLED REJECTION:", loc, msg, reason);
+      Utils.hideLoading();
+      const el = document.getElementById("toast");
+      el.textContent = `❌ ${loc} ${msg}`;
+      el.classList.remove("hidden");
+      el.style.whiteSpace = "pre-wrap";
+      el.style.maxWidth = "90vw";
+      el.style.fontSize = "12px";
+      clearTimeout(el._timeout);
+      el._timeout = setTimeout(() => {
+        el.classList.add("hidden");
+        el.style.whiteSpace = "nowrap";
+        el.style.maxWidth = "";
+        el.style.fontSize = "";
+      }, 10000);
+    });
+    // ====== 全局错误捕获结束 ======
+
     // 注册 Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});

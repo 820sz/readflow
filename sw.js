@@ -1,4 +1,4 @@
-const CACHE = "readflow-v2";
+const CACHE = "readflow-v3";
 const ASSETS = [
   "/",
   "/index.html",
