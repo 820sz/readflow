@@ -55,8 +55,10 @@ const InputModule = (() => {
       Utils.showLoading(mode === "camera" ? "拍照中…" : "读取图片…");
       const image = mode === "camera" ? await Camera.capture() : await Camera.pickFromGallery();
 
-      Utils.showLoading("AI 识别翻译中…");
-      scannedResult = await AI.scanPhoto(image);
+      Utils.showLoading("OCR 识别文字中…");
+      scannedResult = await AI.scanPhoto(image, (step) => {
+        if (step === "translate") Utils.showLoading("AI 翻译分析中…");
+      });
 
       Utils.hideLoading();
 

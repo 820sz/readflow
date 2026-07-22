@@ -143,7 +143,7 @@ const OutputModule = (() => {
   async function uploadPhotoAnswer() {
     try {
       const image = await Camera.pickFromGallery();
-      Utils.showLoading("AI 识别文字中…");
+      Utils.showLoading("OCR 识别文字中…");
       const result = await AI.ocrImage(image);
       Utils.hideLoading();
       document.getElementById("user-translation").value = result.trim();

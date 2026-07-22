@@ -1,9 +1,27 @@
-/* === DeepSeek API 模块 === */
+/* === AI 模块：Tesseract.js OCR + DeepSeek 文本 API === */
 
 const AI = (() => {
   const BASE = "https://api.deepseek.com";
-  const TEXT_MODEL   = "deepseek-v4-flash";   // 文本模型（快、便宜）
-  const VISION_MODEL = "deepseek-v4-pro";      // 多模态模型（支持图片）
+  const MODEL  = "deepseek-v4-flash";
+
+  // --- Tesseract Worker 单例 ---
+  let _worker = null;
+
+  async function getOCRWorker() {
+    if (_worker) return _worker;
+    const T = window.Tesseract;
+    _worker = await T.createWorker("eng");
+    return _worker;
+  }
+
+  /** 用 Tesseract.js 做 OCR，返回纯文本 */
+  async function ocrWithTesseract(base64Image) {
+    const worker = await getOCRWorker();
+    const { data } = await worker.recognize(base64Image);
+    return data.text.trim();
+  }
+
+  // --- DeepSeek 文本请求 ---
 
   function getKey() {
     const key = Utils.getApiKey();
@@ -12,49 +30,18 @@ const AI = (() => {
   }
 
   /** 通用文本请求 */
-  async function chat(messages, { temperature = 0.7, max_tokens = 4096, model } = {}) {
-    model = model || TEXT_MODEL;
+  async function chat(messages, { temperature = 0.7, max_tokens = 4096 } = {}) {
     const resp = await fetch(`${BASE}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${getKey()}`
       },
-      body: JSON.stringify({ model, messages, temperature, max_tokens })
+      body: JSON.stringify({ model: MODEL, messages, temperature, max_tokens })
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
       throw new Error(err.error?.message || `API 请求失败 (${resp.status})`);
-    }
-    const data = await resp.json();
-    return data.choices[0].message.content;
-  }
-
-  /** Vision 请求：图片 + 文本 → 使用多模态模型 */
-  async function chatVision(imageBase64, prompt, { temperature = 0.3, max_tokens = 4096 } = {}) {
-    // DeepSeek V4 原生格式：图片作为消息顶级字段 image_data，
-    // base64 不含 data:image/xxx;base64, 前缀
-    const pureBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-    const resp = await fetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${getKey()}`
-      },
-      body: JSON.stringify({
-        model: VISION_MODEL,
-        messages: [{
-          role: "user",
-          content: prompt,
-          image_data: pureBase64
-        }],
-        temperature,
-        max_tokens
-      })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Vision API 失败 (${resp.status})`);
     }
     const data = await resp.json();
     return data.choices[0].message.content;
@@ -71,38 +58,49 @@ const AI = (() => {
   //  公开方法
   // ================================================================
 
-  /** 📸 拍照 → OCR + 翻译 + 分类 */
-  async function scanPhoto(base64Image) {
-    const prompt = `你是一个专业的英语学习助手。请分析这张照片中的英文文本，完成以下任务，并以 JSON 格式返回结果：
+  /** 📸 拍照 → Tesseract OCR → DeepSeek 翻译 + 分类 */
+  async function scanPhoto(base64Image, onProgress) {
+    // 第一步：Tesseract 本地 OCR
+    onProgress && onProgress("ocr");
+    const ocrText = await ocrWithTesseract(base64Image);
 
-1. **OCR 识别**：识别照片中所有的英文文本
-2. **逐条翻译**：将文本拆分为以下三类，逐条给出原文+中文翻译：
-   - "words"：单个单词
-   - "phrases"：短语/固定搭配
-   - "sentences"：完整句子
-3. **出处标记**：每条记录附上它在原文中出现的位置
+    if (!ocrText) {
+      return { fullText: "", items: [] };
+    }
+
+    // 第二步：DeepSeek 翻译 + 分类
+    onProgress && onProgress("translate");
+    const prompt = `你是一个专业的英语学习助手。请分析以下英文文本，完成以下任务，并以 JSON 格式返回：
+
+=== 英文原文 ===
+${ocrText}
+
+请将文本拆分为以下三类，逐条给出原文+中文翻译：
+- "words"：单个单词
+- "phrases"：短语/固定搭配
+- "sentences"：完整句子
 
 返回格式严格为：
 {
-  "fullText": "照片中完整的英文原文",
+  "fullText": "原文",
   "items": [
     { "text": "单词/短语/句子", "type": "word|phrase|sentence", "translation": "中文翻译" }
   ]
 }
 
 注意：
-- 如果照片中没有任何英文文本，返回 {"fullText": "", "items": []}
 - 不要漏掉任何单词、短语或句子
 - 翻译要准确、符合语境`;
 
-    const raw = await chatVision(base64Image, prompt, { temperature: 0.3 });
-    return extractJSON(raw);
+    const raw = await chat([{ role: "user", content: prompt }], { temperature: 0.3 });
+    const result = extractJSON(raw);
+    result.fullText = result.fullText || ocrText;
+    return result;
   }
 
-  /** 🖼️ 拍照上传答案 → 仅提取英文文本（不做翻译） */
+  /** 🖼️ 拍照上传答案 → OCR 提取英文文本 */
   async function ocrImage(base64Image) {
-    const prompt = "请只提取图片中的所有英文文本，不要翻译，不要加任何解释。直接输出文本。";
-    return chatVision(base64Image, prompt, { temperature: 0.1, max_tokens: 2000 });
+    return ocrWithTesseract(base64Image);
   }
 
   /** 📝 生成含生词文章 */
