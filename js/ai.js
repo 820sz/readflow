@@ -2,7 +2,7 @@
 
 const AI = (() => {
   const BASE = "https://api.deepseek.com";
-  const MODEL  = "deepseek-v4-flash";
+  const MODEL  = "deepseek-chat";  // 文本模型（稳定）
 
   // --- Tesseract Worker 单例 ---
   let _worker = null;
@@ -73,9 +73,9 @@ const AI = (() => {
     }
 
     const content = data?.choices?.[0]?.message?.content;
-    if (content === undefined || content === null) {
-      console.error("Unexpected API response structure:", JSON.stringify(data).slice(0, 300));
-      throw new Error("API 响应结构异常，请重试");
+    if (!content) {
+      console.error("API returned empty content. Full response:", JSON.stringify(data).slice(0, 500));
+      throw new Error("API 返回了空内容，可能是模型繁忙，请稍后重试");
     }
     return content;
   }
@@ -137,6 +137,7 @@ ${ocrText}
 - 翻译要准确、符合语境`;
 
     const raw = await chat([{ role: "user", content: prompt }], { temperature: 0.3 });
+    console.log("OCR text length:", ocrText.length, "API response length:", raw.length);
     const result = extractJSON(raw);
     result.fullText = result.fullText || ocrText;
     return result;
