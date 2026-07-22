@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>生成 ReadFlow 图标</title></head>
+<body style="font-family:sans-serif;padding:40px;text-align:center;">
+  <h2>🖌️ ReadFlow 图标生成器</h2>
+  <p>点击下方按钮下载 PWA 图标，然后放入 <code>assets/icons/</code> 目录</p>
+  <canvas id="c" style="display:none"></canvas>
+  <div id="btns"></div>
+  <script>
+    const sizes = [192, 512];
+    sizes.forEach(size => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      // 背景
+      ctx.fillStyle = "#1a1a2e";
+      ctx.beginPath(); ctx.roundRect(0, 0, size, size, size * 0.18); ctx.fill();
+      // 圆形
+      ctx.fillStyle = "#4a6cf7";
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      // 字母 R
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold ${size * 0.38}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("R", size / 2, size / 2);
+
+      canvas.toBlob(blob => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `icon-${size}.png`;
+        a.textContent = `⬇ 下载 icon-${size}.png`;
+        a.style.cssText = "display:inline-block;margin:10px;padding:12px 24px;background:#4a6cf7;color:#fff;border-radius:8px;text-decoration:none;font-size:16px;";
+        document.getElementById("btns").appendChild(a);
+      });
+    });
+  </script>
+  <p style="margin-top:30px;color:#6b7280;font-size:13px;">
+    下载后将两个 png 文件移动到 <code>D:\readflow\assets\icons\</code>
+  </p>
+</body>
+</html>

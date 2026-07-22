@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>ReadFlow — 阅读驱动英语学习</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 顶部状态栏 -->
+  <header id="app-header">
+    <h1 id="header-title">ReadFlow</h1>
+    <button id="btn-settings" class="icon-btn" title="设置">⚙️</button>
+  </header>
+
+  <!-- 主内容区：三栏面板 -->
+  <main id="app-main">
+    <section id="panel-input" class="panel active">
+      <div class="panel-placeholder">
+        <div class="placeholder-icon">📥</div>
+        <p class="placeholder-title">输入</p>
+        <p class="placeholder-desc">拍照翻译 · 生词收集</p>
+      </div>
+    </section>
+
+    <section id="panel-output" class="panel">
+      <div class="panel-placeholder">
+        <div class="placeholder-icon">📤</div>
+        <p class="placeholder-title">输出</p>
+        <p class="placeholder-desc">AI 文章 · 回译练习 · 纠错</p>
+      </div>
+    </section>
+
+    <section id="panel-me" class="panel">
+      <div class="panel-placeholder">
+        <div class="placeholder-icon">👤</div>
+        <p class="placeholder-title">我的</p>
+        <p class="placeholder-desc">学习轨迹 · 词汇量 · 个性化指导</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 设置面板（默认隐藏） -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div class="overlay-header">
+        <h2>⚙️ 设置</h2>
+        <button id="btn-settings-close" class="icon-btn">✕</button>
+      </div>
+      <div class="overlay-body">
+        <label class="setting-row">
+          <span>DeepSeek API Key</span>
+          <input type="password" id="setting-api-key" placeholder="sk-xxxxxxxx" autocomplete="off">
+        </label>
+        <p class="setting-hint">Key 仅存在你手机本地，不上传任何服务器</p>
+        <button id="btn-save-settings" class="btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部导航 -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-panel="input">
+      <span class="nav-icon">📥</span>
+      <span class="nav-label">输入</span>
+    </button>
+    <button class="nav-btn" data-panel="output">
+      <span class="nav-icon">📤</span>
+      <span class="nav-label">输出</span>
+    </button>
+    <button class="nav-btn" data-panel="me">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">我的</span>
+    </button>
+  </nav>
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- 加载遮罩 -->
+  <div id="loading-overlay" class="overlay hidden">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p id="loading-text">处理中…</p>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/output.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>
