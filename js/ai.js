@@ -10,6 +10,7 @@ const AI = (() => {
   async function getOCRWorker() {
     if (_worker) return _worker;
     const T = window.Tesseract;
+    if (!T) throw new Error("OCR 引擎加载失败，请检查网络后刷新页面");
     _worker = await T.createWorker("eng");
     return _worker;
   }
@@ -17,8 +18,8 @@ const AI = (() => {
   /** 用 Tesseract.js 做 OCR，返回纯文本 */
   async function ocrWithTesseract(base64Image) {
     const worker = await getOCRWorker();
-    const { data } = await worker.recognize(base64Image);
-    return data.text.trim();
+    const result = await worker.recognize(base64Image);
+    return (result?.data?.text || "").trim();
   }
 
   // --- DeepSeek 文本请求 ---
@@ -44,14 +45,27 @@ const AI = (() => {
       throw new Error(err.error?.message || `API 请求失败 (${resp.status})`);
     }
     const data = await resp.json();
-    return data.choices[0].message.content;
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content && content !== "") throw new Error("API 返回异常，请重试");
+    return content;
   }
 
-  /** 提取 JSON（处理 markdown 代码块包裹） */
+  /** 提取 JSON（处理 markdown 代码块包裹 + 容错） */
   function extractJSON(raw) {
+    if (!raw || !raw.trim()) throw new Error("AI 返回了空内容，请重试");
+    // 尝试提取 markdown 代码块
     const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
     const jsonStr = (match ? match[1] : raw).trim();
-    return JSON.parse(jsonStr);
+    try {
+      if (!jsonStr) throw new Error("无法从 AI 回复中提取 JSON");
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        console.error("JSON parse failed, raw response:", raw.slice(0, 500));
+        throw new Error("AI 返回格式异常，请重试");
+      }
+      throw e;
+    }
   }
 
   // ================================================================
