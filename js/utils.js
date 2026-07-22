@@ -64,17 +64,22 @@ const Utils = {
 
   /** 图片 base64 压缩 */
   compressImage(base64, maxW = 1200, quality = 0.8) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let { width, height } = img;
-        if (width > maxW) { height = (height * maxW) / width; width = maxW; }
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        try {
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+          if (width > maxW) { height = (height * maxW) / width; width = maxW; }
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } catch (err) {
+          reject(new Error("图片压缩失败"));
+        }
       };
+      img.onerror = () => reject(new Error("图片加载失败"));
       img.src = base64;
     });
   }
