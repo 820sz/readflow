@@ -11,7 +11,11 @@ const AI = (() => {
     if (_worker) return _worker;
     const T = window.Tesseract;
     if (!T) throw new Error("OCR 引擎加载失败，请检查网络后刷新页面");
-    _worker = await T.createWorker("eng");
+    try {
+      _worker = await T.createWorker("eng");
+    } catch (e) {
+      throw new Error("OCR 引擎初始化失败，请刷新页面重试");
+    }
     return _worker;
   }
 
@@ -32,21 +36,47 @@ const AI = (() => {
 
   /** 通用文本请求 */
   async function chat(messages, { temperature = 0.7, max_tokens = 4096 } = {}) {
-    const resp = await fetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${getKey()}`
-      },
-      body: JSON.stringify({ model: MODEL, messages, temperature, max_tokens })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `API 请求失败 (${resp.status})`);
+    let resp;
+    try {
+      resp = await fetch(`${BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getKey()}`
+        },
+        body: JSON.stringify({ model: MODEL, messages, temperature, max_tokens })
+      });
+    } catch (netErr) {
+      throw new Error("网络请求失败，请检查网络连接");
     }
-    const data = await resp.json();
+
+    // 先读文本，避免 resp.json() 在空 body 时抛 SyntaxError
+    const bodyText = await resp.text().catch(() => "");
+
+    if (!resp.ok) {
+      let errMsg = `API 请求失败 (${resp.status})`;
+      try {
+        const err = JSON.parse(bodyText);
+        errMsg = err.error?.message || errMsg;
+      } catch (_) { /* body 不是 JSON，用默认消息 */ }
+      throw new Error(errMsg);
+    }
+
+    if (!bodyText) throw new Error("API 返回了空响应，请重试");
+
+    let data;
+    try {
+      data = JSON.parse(bodyText);
+    } catch (_) {
+      console.error("API returned non-JSON:", bodyText.slice(0, 300));
+      throw new Error("API 返回异常数据，请重试");
+    }
+
     const content = data?.choices?.[0]?.message?.content;
-    if (!content && content !== "") throw new Error("API 返回异常，请重试");
+    if (content === undefined || content === null) {
+      console.error("Unexpected API response structure:", JSON.stringify(data).slice(0, 300));
+      throw new Error("API 响应结构异常，请重试");
+    }
     return content;
   }
 
