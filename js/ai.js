@@ -32,11 +32,32 @@ const AI = (() => {
 
   /** Vision 请求：图片 + 文本 → 使用多模态模型 */
   async function chatVision(imageBase64, prompt, { temperature = 0.3, max_tokens = 4096 } = {}) {
-    const content = [
-      { type: "image_url", image_url: { url: imageBase64 } },
-      { type: "text", text: prompt }
-    ];
-    return chat([{ role: "user", content }], { temperature, max_tokens, model: VISION_MODEL });
+    // DeepSeek V4 原生格式：图片作为消息顶级字段 image_data，
+    // base64 不含 data:image/xxx;base64, 前缀
+    const pureBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const resp = await fetch(`${BASE}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${getKey()}`
+      },
+      body: JSON.stringify({
+        model: VISION_MODEL,
+        messages: [{
+          role: "user",
+          content: prompt,
+          image_data: pureBase64
+        }],
+        temperature,
+        max_tokens
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Vision API 失败 (${resp.status})`);
+    }
+    const data = await resp.json();
+    return data.choices[0].message.content;
   }
 
   /** 提取 JSON（处理 markdown 代码块包裹） */
